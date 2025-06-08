@@ -6,7 +6,7 @@ import { ProfessionalSidebar } from "@/components/professional-sidebar"
 import { ProfessionalHeader } from "@/components/professional-header"
 import { Dashboard } from "@/components/dashboard"
 import { Profile } from "@/components/profile"
-// import { Tasks } from "@/components/tasks" // Removed Tasks import
+import { Tasks } from "@/components/tasks"
 import { Exams } from "@/components/exams"
 import { Projects } from "@/components/projects"
 import { AcademicCalendar } from "@/components/academic-calendar"
@@ -24,8 +24,8 @@ export default function HomePage() {
         return <Dashboard />
       case "profile":
         return <Profile />
-      // case "tasks": // Removed Tasks case
-      //   return <Tasks />
+      case "tasks":
+        return <Tasks />
       case "exams":
         return <Exams />
       case "projects":
