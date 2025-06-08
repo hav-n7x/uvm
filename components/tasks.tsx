@@ -8,18 +8,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Upload, Plus, Calendar, FileText, Bitcoin, Clock, Bell } from "lucide-react"
+import { Upload, Plus, Calendar, Bitcoin, Clock, Bell, CheckCircle } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { useRouter } from "next/navigation"
 
 export const initialTasksData = [
   {
@@ -147,55 +138,6 @@ export const initialTasksData = [
     gradedAt: null,
     submittedFile: null,
   },
-  {
-    id: 11,
-    title: "API REST con Node.js",
-    subject: "Programación Web",
-    dueDate: "2025-06-22",
-    status: "pending",
-    description: "Crear API REST completa con autenticación JWT",
-    grade: null,
-    deliveredAt: null,
-    gradedAt: null,
-    submittedFile: null,
-  },
-  {
-    id: 12,
-    title: "Presentación Final de Proyecto",
-    subject: "Proyecto Integrador",
-    dueDate: "2025-06-25",
-    status: "pending",
-    description: "Presentación de 20 minutos del proyecto final de carrera",
-    priority: "high",
-    grade: null,
-    deliveredAt: null,
-    gradedAt: null,
-    submittedFile: null,
-  },
-  {
-    id: 13,
-    title: "Examen Práctico de Programación",
-    subject: "Programación Avanzada",
-    dueDate: "2025-06-28",
-    status: "pending",
-    description: "Resolver problemas de programación en tiempo real",
-    grade: null,
-    deliveredAt: null,
-    gradedAt: null,
-    submittedFile: null,
-  },
-  {
-    id: 14,
-    title: "Documentación Técnica",
-    subject: "Ingeniería de Software",
-    dueDate: "2025-07-01",
-    status: "pending",
-    description: "Crear documentación completa del sistema desarrollado",
-    grade: null,
-    deliveredAt: null,
-    gradedAt: null,
-    submittedFile: null,
-  },
 ]
 
 const parseDateSafe = (dateString: string | null | undefined): Date | null => {
@@ -204,17 +146,13 @@ const parseDateSafe = (dateString: string | null | undefined): Date | null => {
   return isNaN(date.getTime()) ? null : date
 }
 
-// Dentro del componente Tasks, agregar el router
 export function Tasks() {
-  const router = useRouter()
   const [isClient, setIsClient] = useState(false)
   const [tasks, setTasks] = useState(initialTasksData)
   const [selectedFiles, setSelectedFiles] = useState<Record<number, File | null>>({})
-
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null)
   const [comments, setComments] = useState("")
   const [notifications, setNotifications] = useState<string[]>([])
-  const [lastUpdate, setLastUpdate] = useState(() => new Date())
 
   useEffect(() => {
     setIsClient(true)
@@ -225,15 +163,11 @@ export function Tasks() {
       try {
         const savedTasks = localStorage.getItem("uvm-tasks")
         if (savedTasks) {
-          const parsedTasks = JSON.parse(savedTasks).map((task: any) => ({
-            ...task,
-            deliveredAt: task.deliveredAt,
-            gradedAt: task.gradedAt,
-          }))
+          const parsedTasks = JSON.parse(savedTasks)
           setTasks(parsedTasks)
         }
       } catch (error) {
-        console.error("Error al cargar tareas desde localStorage:", error)
+        console.error("Error al cargar tareas:", error)
       }
     }
   }, [isClient])
@@ -244,22 +178,21 @@ export function Tasks() {
     }
   }, [tasks, isClient])
 
+  // Sistema de calificación automática
   useEffect(() => {
     if (!isClient) return
 
     const interval = setInterval(() => {
-      setLastUpdate(new Date())
-
       setTasks((prevTasks) =>
         prevTasks.map((task) => {
           const deliveredAtDate = parseDateSafe(task.deliveredAt)
-          if (deliveredAtDate && !task.grade && !task.gradedAt) {
+          if (deliveredAtDate && !task.grade && task.status === "delivered") {
             const timeSinceDelivery = Date.now() - deliveredAtDate.getTime()
-            const gradeTime = 2 * 60 * 1000
+            const gradeTime = 20 * 1000 // 20 segundos para pruebas
 
             if (timeSinceDelivery >= gradeTime) {
               const randomGrade = Math.floor(Math.random() * 31) + 70
-              setNotifications((prev) => [...prev, `¡Nueva calificación! ${task.title}: ${randomGrade}/100`])
+              setNotifications((prev) => [...prev, `🎉 ¡Nueva calificación! ${task.title}: ${randomGrade}/100`])
               return {
                 ...task,
                 grade: randomGrade,
@@ -271,32 +204,40 @@ export function Tasks() {
           return task
         }),
       )
-    }, 60000)
+    }, 5000) // Revisar cada 5 segundos
 
     return () => clearInterval(interval)
   }, [isClient])
 
+  // Limpiar notificaciones después de 8 segundos
   useEffect(() => {
     if (notifications.length > 0) {
       const timer = setTimeout(() => {
         setNotifications([])
-      }, 10000)
+      }, 8000)
       return () => clearTimeout(timer)
     }
   }, [notifications])
 
   const handleFileChange = useCallback((event: React.ChangeEvent<HTMLInputElement>, taskId: number) => {
+    event.stopPropagation()
     const file = event.target.files?.[0]
     if (file) {
       setSelectedFiles((prev) => ({
         ...prev,
         [taskId]: file,
       }))
+      console.log(`Archivo seleccionado para tarea ${taskId}:`, file.name)
     }
   }, [])
 
   const handleDeliverTask = useCallback(
-    (taskId: number) => {
+    (taskId: number, event?: React.MouseEvent) => {
+      if (event) {
+        event.stopPropagation()
+        event.preventDefault()
+      }
+
       const file = selectedFiles[taskId]
       if (file) {
         setTasks((prevTasks) =>
@@ -319,16 +260,10 @@ export function Tasks() {
         }))
 
         // Mostrar notificación de éxito
-        setNotifications((prev) => [
-          ...prev,
-          `✅ Tarea "${tasks.find((t) => t.id === taskId)?.title}" entregada exitosamente`,
-        ])
+        const taskTitle = tasks.find((t) => t.id === taskId)?.title
+        setNotifications((prev) => [...prev, `✅ Tarea "${taskTitle}" entregada exitosamente`])
 
-        // Limpiar el input de archivo
-        const fileInput = document.getElementById(`file-${taskId}`) as HTMLInputElement
-        if (fileInput) {
-          fileInput.value = ""
-        }
+        console.log(`Tarea ${taskId} entregada con archivo:`, file.name)
       }
     },
     [selectedFiles, tasks],
@@ -338,16 +273,14 @@ export function Tasks() {
     const deliveredAtDate = parseDateSafe(deliveredAtISO)
     if (!deliveredAtDate) return null
 
-    const gradeTime = 2 * 60 * 1000
+    const gradeTime = 20 * 1000 // 20 segundos
     const timeElapsed = Date.now() - deliveredAtDate.getTime()
     const timeRemaining = gradeTime - timeElapsed
 
     if (timeRemaining <= 0) return "Calificando..."
 
-    const minutes = Math.floor(timeRemaining / 60000)
-    const seconds = Math.floor((timeRemaining % 60000) / 1000)
-
-    return `${minutes}:${seconds.toString().padStart(2, "0")}`
+    const seconds = Math.floor(timeRemaining / 1000)
+    return `${seconds}s`
   }
 
   const getStatusBadge = (task: any) => {
@@ -391,7 +324,14 @@ export function Tasks() {
   }
 
   if (!isClient) {
-    return null
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <Clock className="h-8 w-8 animate-spin mx-auto mb-2" />
+          <p>Cargando tareas...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -416,52 +356,10 @@ export function Tasks() {
             Gestiona y entrega tus tareas académicas
           </p>
         </div>
-        <Dialog>
-          <DialogTrigger asChild>
-            <Button className="bg-red-600 hover:bg-red-700 w-full sm:w-auto">
-              <Plus className="h-4 w-4 mr-2" />
-              Nueva Tarea
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-[95vw] sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>Agregar Nueva Tarea</DialogTitle>
-              <DialogDescription>
-                Crea una nueva tarea para hacer seguimiento de tus actividades académicas.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="title">Título de la Tarea</Label>
-                <Input id="title" placeholder="Ej: Ejercicios de Cálculo" />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="subject">Materia</Label>
-                <Select>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecciona una materia" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="algebra">Álgebra Lineal</SelectItem>
-                    <SelectItem value="programming">Programación Avanzada</SelectItem>
-                    <SelectItem value="database">Base de Datos</SelectItem>
-                    <SelectItem value="networks">Redes de Computadoras</SelectItem>
-                    <SelectItem value="web">Programación Web</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="dueDate">Fecha de Entrega</Label>
-                <Input id="dueDate" type="date" />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="description">Descripción</Label>
-                <Textarea id="description" placeholder="Describe los detalles de la tarea..." />
-              </div>
-            </div>
-            <Button className="bg-red-600 hover:bg-red-700">Crear Tarea</Button>
-          </DialogContent>
-        </Dialog>
+        <Button className="bg-red-600 hover:bg-red-700 w-full sm:w-auto">
+          <Plus className="h-4 w-4 mr-2" />
+          Nueva Tarea
+        </Button>
       </div>
 
       {/* Tasks Grid */}
@@ -472,8 +370,7 @@ export function Tasks() {
           return (
             <Card
               key={task.id}
-              className={`hover:shadow-lg transition-shadow cursor-pointer ${task.priority === "high" ? "border-l-4 border-l-red-600" : ""}`}
-              onClick={(e) => e.preventDefault()}
+              className={`hover:shadow-lg transition-shadow ${task.priority === "high" ? "border-l-4 border-l-red-600" : ""}`}
             >
               <CardHeader className="p-4">
                 <div className="flex flex-col gap-2">
@@ -506,32 +403,31 @@ export function Tasks() {
                 )}
 
                 {task.status === "pending" && (
-                  <div className="space-y-3">
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+                  <div className="space-y-3" onClick={(e) => e.stopPropagation()}>
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-red-400 transition-colors">
                       <Upload className="h-6 w-6 sm:h-8 sm:w-8 mx-auto text-gray-400 mb-2" />
-                      <Label htmlFor={`file-${task.id}`} className="cursor-pointer">
-                        <span className="text-sm text-gray-600">Haz clic para subir archivo o arrastra aquí</span>
+                      <div className="space-y-2">
+                        <p className="text-sm text-gray-600">Arrastra tu archivo aquí o haz clic para seleccionar</p>
                         <Input
-                          id={`file-${task.id}`}
                           type="file"
-                          className="hidden"
                           onChange={(e) => handleFileChange(e, task.id)}
-                          accept=".pdf,.doc,.docx,.txt,.zip"
+                          accept=".pdf,.doc,.docx,.txt,.zip,.jpg,.png"
+                          className="cursor-pointer"
                         />
-                      </Label>
+                      </div>
                     </div>
 
                     {selectedFiles[task.id] && (
-                      <div className="flex items-center gap-2 text-sm text-green-600">
-                        <FileText className="h-4 w-4 flex-shrink-0" />
-                        <span className="break-words">{selectedFiles[task.id]?.name}</span>
+                      <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 p-2 rounded">
+                        <CheckCircle className="h-4 w-4 flex-shrink-0" />
+                        <span className="break-words font-medium">{selectedFiles[task.id]?.name}</span>
                       </div>
                     )}
 
                     <Button
-                      className="w-full bg-red-600 hover:bg-red-700 disabled:opacity-50"
+                      className="w-full bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
                       disabled={!selectedFiles[task.id]}
-                      onClick={() => handleDeliverTask(task.id)}
+                      onClick={(e) => handleDeliverTask(task.id, e)}
                     >
                       {selectedFiles[task.id] ? "Entregar Tarea" : "Selecciona un archivo primero"}
                     </Button>
@@ -547,6 +443,7 @@ export function Tasks() {
                         <span>Calificación en: {getTimeUntilGrade(task.deliveredAt)}</span>
                       </div>
                     </div>
+                    {task.submittedFile && <div className="text-xs text-gray-400">Archivo: {task.submittedFile}</div>}
                   </div>
                 )}
 
@@ -556,6 +453,9 @@ export function Tasks() {
                     <div className="text-lg font-bold text-purple-600">Nota: {task.grade}/100</div>
                     {gradedAtDate && (
                       <div className="text-xs text-gray-500">Calificada: {gradedAtDate.toLocaleString("es-ES")}</div>
+                    )}
+                    {task.submittedFile && (
+                      <div className="text-xs text-gray-400">Archivo entregado: {task.submittedFile}</div>
                     )}
                   </div>
                 )}
@@ -610,31 +510,26 @@ export function Tasks() {
             <div className="border-2 border-dashed border-red-300 rounded-lg p-4 sm:p-6 text-center bg-red-50">
               <Upload className="h-8 w-8 sm:h-12 sm:w-12 mx-auto text-red-400 mb-4" />
               <h3 className="text-base sm:text-lg font-medium text-red-700 mb-2">Subir Archivo</h3>
-              <p className="text-sm text-red-600 mb-4">Formatos permitidos: PDF, DOC, DOCX, TXT, ZIP</p>
-              <Label htmlFor="main-upload" className="cursor-pointer">
-                <Button variant="outline" className="border-red-300 text-red-700 hover:bg-red-100">
-                  Seleccionar Archivo
-                </Button>
-                <Input
-                  id="main-upload"
-                  type="file"
-                  className="hidden"
-                  accept=".pdf,.doc,.docx,.txt,.zip"
-                  onChange={(e) => selectedTaskId && handleFileChange(e, selectedTaskId)}
-                />
-              </Label>
+              <p className="text-sm text-red-600 mb-4">Formatos permitidos: PDF, DOC, DOCX, TXT, ZIP, JPG, PNG</p>
+
+              <Input
+                type="file"
+                accept=".pdf,.doc,.docx,.txt,.zip,.jpg,.png"
+                onChange={(e) => selectedTaskId && handleFileChange(e, selectedTaskId)}
+                className="mb-4"
+              />
 
               {selectedTaskId && selectedFiles[selectedTaskId] && (
                 <div className="mt-4">
-                  <div className="flex items-center gap-2 text-sm text-green-600 justify-center">
-                    <FileText className="h-4 w-4" />
+                  <div className="flex items-center gap-2 text-sm text-green-600 justify-center mb-3">
+                    <CheckCircle className="h-4 w-4" />
                     <span className="truncate" title={selectedFiles[selectedTaskId]?.name}>
                       {selectedFiles[selectedTaskId]?.name}
                     </span>
                   </div>
                   <Button
-                    className="mt-3 bg-red-600 hover:bg-red-700"
-                    onClick={() => handleDeliverTask(selectedTaskId)}
+                    className="bg-red-600 hover:bg-red-700"
+                    onClick={() => selectedTaskId && handleDeliverTask(selectedTaskId)}
                   >
                     Entregar Tarea
                   </Button>
