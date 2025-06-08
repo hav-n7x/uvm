@@ -33,6 +33,7 @@ export const initialTasksData = [
     deliveredAt: null,
     gradedAt: null,
     priority: "normal",
+    submittedFile: null,
   },
   {
     id: 2,
@@ -45,6 +46,7 @@ export const initialTasksData = [
     deliveredAt: null,
     gradedAt: null,
     priority: "normal",
+    submittedFile: null,
   },
   {
     id: 3,
@@ -57,6 +59,7 @@ export const initialTasksData = [
     deliveredAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
     gradedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
     priority: "normal",
+    submittedFile: null,
   },
   {
     id: 4,
@@ -69,6 +72,7 @@ export const initialTasksData = [
     grade: null,
     deliveredAt: null,
     gradedAt: null,
+    submittedFile: null,
   },
   {
     id: 5,
@@ -80,6 +84,7 @@ export const initialTasksData = [
     grade: null,
     deliveredAt: null,
     gradedAt: null,
+    submittedFile: null,
   },
   {
     id: 6,
@@ -91,6 +96,7 @@ export const initialTasksData = [
     grade: null,
     deliveredAt: null,
     gradedAt: null,
+    submittedFile: null,
   },
   {
     id: 7,
@@ -103,6 +109,7 @@ export const initialTasksData = [
     grade: null,
     deliveredAt: null,
     gradedAt: null,
+    submittedFile: null,
   },
   {
     id: 8,
@@ -114,6 +121,7 @@ export const initialTasksData = [
     grade: null,
     deliveredAt: null,
     gradedAt: null,
+    submittedFile: null,
   },
   {
     id: 9,
@@ -125,6 +133,7 @@ export const initialTasksData = [
     grade: null,
     deliveredAt: null,
     gradedAt: null,
+    submittedFile: null,
   },
   {
     id: 10,
@@ -136,6 +145,7 @@ export const initialTasksData = [
     grade: null,
     deliveredAt: null,
     gradedAt: null,
+    submittedFile: null,
   },
   {
     id: 11,
@@ -147,6 +157,7 @@ export const initialTasksData = [
     grade: null,
     deliveredAt: null,
     gradedAt: null,
+    submittedFile: null,
   },
   {
     id: 12,
@@ -159,6 +170,7 @@ export const initialTasksData = [
     grade: null,
     deliveredAt: null,
     gradedAt: null,
+    submittedFile: null,
   },
   {
     id: 13,
@@ -170,6 +182,7 @@ export const initialTasksData = [
     grade: null,
     deliveredAt: null,
     gradedAt: null,
+    submittedFile: null,
   },
   {
     id: 14,
@@ -181,6 +194,7 @@ export const initialTasksData = [
     grade: null,
     deliveredAt: null,
     gradedAt: null,
+    submittedFile: null,
   },
 ]
 
@@ -283,19 +297,41 @@ export function Tasks() {
 
   const handleDeliverTask = useCallback(
     (taskId: number) => {
-      if (selectedFiles[taskId]) {
+      const file = selectedFiles[taskId]
+      if (file) {
         setTasks((prevTasks) =>
           prevTasks.map((task) =>
-            task.id === taskId ? { ...task, status: "delivered", deliveredAt: new Date().toISOString() } : task,
+            task.id === taskId
+              ? {
+                  ...task,
+                  status: "delivered",
+                  deliveredAt: new Date().toISOString(),
+                  submittedFile: file.name,
+                }
+              : task,
           ),
         )
+
+        // Limpiar el archivo seleccionado
         setSelectedFiles((prev) => ({
           ...prev,
           [taskId]: null,
         }))
+
+        // Mostrar notificación de éxito
+        setNotifications((prev) => [
+          ...prev,
+          `✅ Tarea "${tasks.find((t) => t.id === taskId)?.title}" entregada exitosamente`,
+        ])
+
+        // Limpiar el input de archivo
+        const fileInput = document.getElementById(`file-${taskId}`) as HTMLInputElement
+        if (fileInput) {
+          fileInput.value = ""
+        }
       }
     },
-    [selectedFiles],
+    [selectedFiles, tasks],
   )
 
   const getTimeUntilGrade = (deliveredAtISO: string | null) => {
@@ -437,7 +473,7 @@ export function Tasks() {
             <Card
               key={task.id}
               className={`hover:shadow-lg transition-shadow cursor-pointer ${task.priority === "high" ? "border-l-4 border-l-red-600" : ""}`}
-              onClick={() => router.push(`/tareas/${task.id}`)}
+              onClick={(e) => e.preventDefault()}
             >
               <CardHeader className="p-4">
                 <div className="flex flex-col gap-2">
