@@ -358,6 +358,15 @@ export function Tasks() {
     return null
   }
 
+  // Cambiar el onClick del Card para usar una función que maneje la navegación correctamente
+  const handleTaskClick = (taskId: number, event: React.MouseEvent) => {
+    // Prevenir la propagación del evento si se hace clic en botones internos
+    if ((event.target as HTMLElement).closest("button, input, label")) {
+      return
+    }
+    router.push(`/tareas/${taskId}`)
+  }
+
   return (
     <div className="space-y-4 sm:space-y-6 p-4 sm:p-6">
       {/* Notificaciones */}
@@ -437,7 +446,7 @@ export function Tasks() {
             <Card
               key={task.id}
               className={`hover:shadow-lg transition-shadow cursor-pointer ${task.priority === "high" ? "border-l-4 border-l-red-600" : ""}`}
-              onClick={() => router.push(`/tareas/${task.id}`)}
+              onClick={(e) => handleTaskClick(task.id, e)}
             >
               <CardHeader className="p-4">
                 <div className="flex flex-col gap-2">
@@ -495,7 +504,10 @@ export function Tasks() {
                     <Button
                       className="w-full bg-red-600 hover:bg-red-700 disabled:opacity-50"
                       disabled={!selectedFiles[task.id]}
-                      onClick={() => handleDeliverTask(task.id)}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleDeliverTask(task.id)
+                      }}
                     >
                       {selectedFiles[task.id] ? "Entregar Tarea" : "Selecciona un archivo primero"}
                     </Button>

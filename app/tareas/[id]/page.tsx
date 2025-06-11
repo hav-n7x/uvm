@@ -20,10 +20,6 @@ export default function TaskDetailPage({ params }: { params: { id: string } }) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
 
   useEffect(() => {
-    // Este efecto redirige a la página principal con la sección de tareas activa
-    const event = new CustomEvent("set-active-section", { detail: "tasks" })
-    window.dispatchEvent(event)
-
     // Cargar la tarea específica
     const taskId = Number.parseInt(params.id)
     const foundTask = initialTasksData.find((t) => t.id === taskId)
@@ -47,7 +43,7 @@ export default function TaskDetailPage({ params }: { params: { id: string } }) {
 
     // Aquí iría la lógica para enviar la tarea
     alert(`Tarea "${task.title}" entregada con éxito`)
-    router.push("/")
+    router.back()
   }
 
   if (isLoading) {
@@ -89,7 +85,7 @@ export default function TaskDetailPage({ params }: { params: { id: string } }) {
 
   return (
     <div className="p-4 sm:p-6 space-y-6">
-      <Button variant="ghost" className="mb-4" onClick={() => router.push("/")}>
+      <Button variant="ghost" className="mb-4" onClick={() => router.back()}>
         <ArrowLeft className="h-4 w-4 mr-2" />
         Volver a Tareas
       </Button>
